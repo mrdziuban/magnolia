@@ -37,6 +37,10 @@ case object Blue extends Color
 
 case class `%%`(`/`: Int, `#`: String)
 
+class ParentClass() {
+  case class InnerClass(name: String)
+}
+
 object Tests extends TestApp {
 
   def tests() = for (i <- 1 to 1000) {
@@ -177,12 +181,10 @@ object Tests extends TestApp {
       Show.gen[Length].show(new Length(100))
     }.assert(_ == "100")
 
-    class ParentClass {
-      case class InnerClass(name: String)
+    test("serialize a case class inside another class") {
+      val parent = new ParentClass()
+      implicitly[Show[String, parent.InnerClass]].show(parent.InnerClass("foo"))
+    }.assert(_ == "InnerClass(name=foo)")
 
-      test("serialize a case class inside another class") {
-        implicitly[Show[String, InnerClass]].show(InnerClass("foo"))
-      }.assert(_ == "InnerClass(name=foo)")
-    }
   }
 }
