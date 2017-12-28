@@ -1,7 +1,6 @@
 package magnolia
 
 import language.higherKinds
-import scala.annotation.tailrec
 
 /** represents a subtype of a sealed trait
   *
@@ -129,7 +128,7 @@ abstract class CaseClass[Typeclass[_], Type] private[magnolia] (
     *
     *  For efficiency, this sequence is implemented by an `Array`, but upcast to a
     *  [[scala.collection.Seq]] to hide the mutable collection API. */
-  final def parameters: Seq[Param[Typeclass, Type]] = parametersArray
+  def parameters: Seq[Param[Typeclass, Type]] = parametersArray
 }
 
 /** represents a sealed trait and the context required to construct a new typeclass instance
@@ -158,12 +157,12 @@ final class SealedTrait[Typeclass[_], Type](val typeName: String,
     *                 matches
     *  @return  the result of applying the `handle` lambda to subtype of the sealed trait which
     *           matches the parameter `value` */
-  def dispatch[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return = {
-    @tailrec def rec(ix: Int): Return =
-      if (ix < subtypesArray.length) {
-        val sub = subtypesArray(ix)
-        if (sub.cast.isDefinedAt(value)) handle(sub) else rec(ix + 1)
-      } else throw new IllegalArgumentException(s"The given value `$value` is not a sub type of `$typeName`")
-    rec(0)
-  }
+  def dispatch[Return](value: Type)(handle: Subtype[Typeclass, Type] => Return): Return =
+    subtypes
+      .map { sub =>
+        sub.cast.andThen { v =>
+          handle(sub)
+        }
+      }
+      .reduce(_ orElse _)(value)
 }
